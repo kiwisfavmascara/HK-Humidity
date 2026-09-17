@@ -1,0 +1,15 @@
+# nothing here is needed to run the scripts
+__pycache__/
+*.pyc
+
+# uv can recreate these
+.venv/
+.python-version
+
+# editor and OS noise
+.DS_Store
+.vscode/
+.idea/
+
+# the web page, if there is one, is output: it is rebuilt from data/ on every push
+site/
