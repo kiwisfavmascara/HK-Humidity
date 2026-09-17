@@ -4,19 +4,25 @@
 # ///
 
 """
-A first look at the year: one line.
+One year of air over Hong Kong, drawn twice: as relative humidity and as dew point.
 
     uv run plot.py
 
-Writes out/humidity-year.png and opens a window.
+Writes out/humidity-grids.png and opens a window.
 
-This is the obvious first move — collapse each day to its average and join the
-365 averages up. It is worth committing even though the next commit replaces it,
-because of what it throws away: averaging the day away deletes the strongest
-thing in this file.
+Both panels are the same 8,760 hours laid out the same way: 365 rows, one per day,
+24 columns, one per hour. The only thing that changes between them is which
+number colours the square. And that change moves the pattern: in relative
+humidity the stripes run down the page — the same hour looks the same on every
+day of the year. In dew point they run across — the day almost disappears and
+the year takes over.
+
+Relative humidity is a fraction: how full the air is, compared with how full it
+could be at its temperature. Dew point is an amount: the temperature at which
+that air would be saturated. The first forgets how warm the air is; the second
+does not. That difference is the whole picture.
 """
 
-import datetime as dt
 import json
 from pathlib import Path
 
@@ -29,24 +35,24 @@ FILE = DATA / "open-meteo-hong-kong-hourly-2025.json"
 
 PAPER = "#faf8f4"
 INK = "#1d1d1b"
-HUMID = "#2a6f7f"
-MARK = "#d6591d"
-FIGSIZE = (11, 4.5)
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+FIGSIZE = (13.5, 7.2)
 
 
 def load():
-    """The three lists of numbers, and the hours they belong to."""
+    """The raw file, and the three lists of numbers in it."""
     reply = json.loads(FILE.read_text(encoding="utf-8"))
     hours = reply["hourly"]
-    return hours["time"], hours["relative_humidity_2m"], reply["hourly_units"]
+    return hours["time"], hours["relative_humidity_2m"], hours["dewpoint_2m"], reply["hourly_units"]
 
 
-def days(values, per_day=24):
-    """One flat list of 8,760 numbers as 365 days of 24. A loop, one day at a time."""
-    whole = []
+def as_days(values, per_day=24):
+    """One flat list of 8,760 numbers as 365 rows of 24. A loop, one day at a time."""
+    rows = []
     for start in range(0, len(values), per_day):
-        whole.append(values[start:start + per_day])
-    return whole
+        rows.append(values[start:start + per_day])
+    return rows
 
 
 def average(numbers):
@@ -57,48 +63,92 @@ def average(numbers):
     return total / len(numbers)
 
 
+def month_marks(times):
+    """Where each month starts, and the middle of each month, counted in days.
+
+    A loop over the time strings: the day number changes whenever the month does.
+    The first version of this function counted hours instead of days, which put
+    the December tick at 4,546 and stretched the year axis twelvefold — the
+    whole picture ended up as one thin stripe at the top of the panel.
+    """
+    starts = []
+    last_month = None
+    for i, stamp in enumerate(times):
+        month = int(stamp[5:7])
+        if month != last_month:
+            starts.append(i // 24)              # hours to days: 24 hours to a row
+            last_month = month
+    ends = starts[1:] + [len(times) // 24]      # each month runs to the start of the next
+    middles = [(a + b) / 2 for a, b in zip(starts, ends)]
+    return starts, middles
+
+
+def two_rhythms(times, humidity, dewpoint):
+    """The numbers the whole picture rests on, printed so the README can quote them."""
+    per_hour = [[] for _ in range(24)]
+    for stamp, value in zip(times, humidity):
+        per_hour[int(stamp[11:13])].append(value)
+    hour_means = [average(v) for v in per_hour]
+
+    narrow = [(d, h) for h, d in zip(humidity, dewpoint) if 78 <= h <= 82]
+    dps = [d for d, _ in narrow]
+
+    print("relative humidity, hour by hour across the year")
+    print(f"  most humid hour of the day: {hour_means.index(max(hour_means)):02d}:00 "
+          f"at {max(hour_means):.0f} %")
+    print(f"  driest  hour of the day:    {hour_means.index(min(hour_means)):02d}:00 "
+          f"at {min(hour_means):.0f} %")
+    print(f"  the daily swing is {max(hour_means) - min(hour_means):.0f} points, "
+          f"every single day")
+    print(f"\nhours reading 78-82 %: {len(narrow)}")
+    print(f"  their dew points run {min(dps):.1f} to {max(dps):.1f} C — "
+          f"the same number, two different airs")
+
+
+def draw(axes, grid, cmap, title, unit, vmin, vmax, month_starts, month_middles):
+    """One panel. The layout is identical for both; only the numbers differ."""
+    picture = axes.imshow(grid, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto",
+                          interpolation="nearest", origin="upper",
+                          extent=(0, 24, len(grid), 0))
+    for edge in month_starts[1:]:
+        axes.axhline(edge, color=PAPER, linewidth=0.6, alpha=0.7)
+    axes.set_title(title, color=INK, fontsize=12, pad=8)
+    axes.set_xlabel("hour of the day", color=INK)
+    axes.set_xticks([h + 0.5 for h in range(0, 24, 3)])
+    axes.set_xticklabels([f"{h:02d}" for h in range(0, 24, 3)])
+    axes.set_yticks([m + 15 for m in month_middles])
+    axes.set_yticklabels(MONTHS)
+    axes.tick_params(colors=INK, length=0)
+    bar = plt.colorbar(picture, ax=axes, fraction=0.035, pad=0.02)
+    bar.set_label(unit, color=INK)
+    bar.ax.tick_params(colors=INK)
+    bar.outline.set_visible(False)
+
+
 def main():
-    times, humidity, units = load()
-    by_day = days(humidity)
+    times, humidity, dewpoint, units = load()
+    rh_days = as_days(humidity)
+    dp_days = as_days(dewpoint)
+    month_starts, month_middles = month_marks(times)
 
-    labels = []
-    means = []
-    for i, day in enumerate(by_day):
-        labels.append(dt.date.fromisoformat(times[i * 24][:10]))
-        means.append(average(day))
+    two_rhythms(times, humidity, dewpoint)
 
-    figure, axes = plt.subplots(figsize=FIGSIZE, facecolor=PAPER)
-    axes.set_facecolor(PAPER)
+    figure, (left, right) = plt.subplots(1, 2, figsize=FIGSIZE, facecolor=PAPER)
+    figure.suptitle("Hong Kong, 2025 — the same 8,760 hours, two numbers",
+                    color=INK, fontsize=14)
 
-    axes.plot(labels, means, color=HUMID, linewidth=1.6)
-    axes.fill_between(labels, means, min(means) - 2, color=HUMID, alpha=0.15)
-
-    wettest = means.index(max(means))
-    driest = means.index(min(means))
-    for i, word in ((wettest, "wettest"), (driest, "driest")):
-        axes.plot(labels[i], means[i], "o", color=MARK, markersize=7)
-        axes.annotate(f"{word}: {means[i]:.0f} {units['relative_humidity_2m']}\n"
-                      f"{labels[i]:%d %b}",
-                      (labels[i], means[i]), textcoords="offset points",
-                      xytext=(6, 10), color=MARK, fontsize=9)
-
-    axes.set_title("Hong Kong, 2025 — the mean humidity of every day", color=INK, fontsize=13)
-    axes.set_xlabel("day of the year", color=INK)
-    axes.set_ylabel(f"daily mean relative humidity ({units['relative_humidity_2m']})", color=INK)
-    axes.tick_params(colors=INK)
-    axes.grid(color=INK, alpha=0.12)
-    axes.set_ylim(min(means) - 6, max(means) + 10)
-    for side in ("top", "right"):
-        axes.spines[side].set_visible(False)
+    draw(left, rh_days, "YlGnBu",
+         "relative humidity — the stripes run down", units["relative_humidity_2m"],
+         20, 100, month_starts, month_middles)
+    draw(right, dp_days, "YlOrRd",
+         "dew point — the stripes run across", f"dew point ({units['dewpoint_2m']})",
+         0, 28, month_starts, month_middles)
 
     OUT.mkdir(exist_ok=True)
-    target = OUT / "humidity-year.png"
+    target = OUT / "humidity-grids.png"
     figure.tight_layout()
     figure.savefig(target, dpi=150, facecolor=PAPER)
-    print(f"wrote {target.relative_to(HERE)}")
-    print(f"  wettest day {labels[wettest]} at {means[wettest]:.1f} {units['relative_humidity_2m']}")
-    print(f"  driest  day {labels[driest]} at {means[driest]:.1f} {units['relative_humidity_2m']}")
-    print(f"  the seasonal swing is {max(means) - min(means):.1f} points")
+    print(f"\nwrote {target.relative_to(HERE)}")
     plt.show()
 
 
