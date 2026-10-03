@@ -54,3 +54,17 @@ The decisions were mine: keeping the old version in the repo instead of
 deleting it, keeping the 365-tick year ring so growth always has a context,
 and accepting that a month-flower takes a minute to open — the slowness is
 the data.
+
+Two corrections came from watching the flower behave. First, my first
+month-flower re-balanced itself: every new petal nudged the others apart so
+the wheel always looked full. It was elegant and it was wrong — a petal
+should be a date, and a date does not migrate. The AI helped me rewrite it so
+day 1 owns the top of the wheel and day j sits at j/360 of the turn, opened
+or not; the flower now grows clockwise like a clock being assembled, and a
+half-open July honestly looks half-finished. Second, at 31 petals the days
+blur together, so hovering became part of the design: the petal under the
+cursor is drawn a second time, brighter, and its own numbers — that day's
+humidity and dew point — appear at the foot of the window. That turned the
+flower from a picture you look at into one you can interrogate, and it uses
+the same hit-test arithmetic as the drawing, so the lit petal and the label
+can never disagree.

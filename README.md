@@ -81,8 +81,13 @@ winter days sitting almost straight.
 
 The flower starts as a single petal — July the 1st — and every ←/→ (or the
 mouse wheel) opens one more day; when the month is full, the next petal
-belongs to the next month. ↑/↓ jump between months, SPACE lets the year grow
-by itself. **Click the window once before pressing keys** — keys follow the
+belongs to the next month. The petals hold their places: day 1 sits at the
+top, day 2 sits clockwise of it, and a petal, once grown, never moves again —
+the month fills the wheel in order, like a clock being built. Move the mouse
+over a petal and that day lights up while the others stay still, and the foot
+of the window reads out that day: "day 05 under the cursor, humidity 81 %,
+dew point 24.5 °C". ↑/↓ jump between months, SPACE lets the year grow by
+itself. **Click the window once before pressing keys** — keys follow the
 focused window, and the terminal you launched from would otherwise keep them.
 Holding an arrow key keeps the flower growing; a left click also opens a petal
 and a right click closes one; the window is mirrored by a line of text in the

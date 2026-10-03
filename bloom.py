@@ -28,8 +28,12 @@ the petal swells where its hours were humid, so a petal's silhouette is that
 day's humidity rhythm. The curl of a petal is that day's mean dew point —
 warm air curls, cool air straightens — the "stripes run across" grid drawn
 as a gesture. A month begins as a single petal; each RIGHT adds a day, so the
-flower you end up with is the month, petal by petal. The faint outer ring is
-still the whole year: one tick per day with a needle on the newest petal.
+flower you end up with is the month, petal by petal. The petals keep their
+places — day 1 at the top, day 2 clockwise of it, and so on — so a petal, once
+grown, never moves again, and the month fills the wheel in order. Move the
+mouse over a petal and that day lights up, with its own humidity and dew point
+written at the foot of the window. The faint outer ring is still the whole
+year: one tick per day with a needle on the newest petal.
 Every number comes from data/*.json — nothing here is decorative.
 """
 
@@ -103,14 +107,15 @@ def hum_colour(rh):
     return _ramp(HUM_STOPS, rh, 30.0, 100.0)
 
 
-def petal(surface, angle, record, frac, swirl, rng):
+def petal(surface, angle, record, frac, swirl, rng, glow=1.0):
     """One petal = one day. The radius is the hour: 00:00 at the heart,
     24:00 at the tip. Colour is the hour's humidity, swell is the hour's
-    humidity, curl is the day's dew point."""
+    humidity, curl is the day's dew point. `glow` lifts a hovered petal."""
     length = R_IN + 40 + frac * (R_MAX - R_IN - 40)
     spread = length * 0.30                        # a broad membrane, like the study
     streams = 20                                  # warp threads of dust
     dots = 46                                     # weft: finer than the hours
+    boost = 1.45 * glow
     rh = record["rh"]
     for s in range(streams):
         u = (s / (streams - 1)) * 2 - 1 if streams > 1 else 0.0
@@ -133,12 +138,12 @@ def petal(surface, angle, record, frac, swirl, rng):
             sheen = hum_colour(clamp(rh_hour + u * 10, 30.0, 100.0))
             base = hum_colour(rh_hour)
             mix = abs(u) * 0.65
-            r = int((base[0] + (sheen[0] - base[0]) * mix) * 1.45)
-            g = int((base[1] + (sheen[1] - base[1]) * mix) * 1.45)
-            b = int((base[2] + (sheen[2] - base[2]) * mix) * 1.45)
+            r = int((base[0] + (sheen[0] - base[0]) * mix) * boost)
+            g = int((base[1] + (sheen[1] - base[1]) * mix) * boost)
+            b = int((base[2] + (sheen[2] - base[2]) * mix) * boost)
             fade = (0.20 + 0.80 * t) * edge * (0.40 + 0.60 * math.sin(math.pi * t) ** 0.3)
-            bright = int(255 * min(1.0, fade))
-            if rng.random() < 0.03:               # a bright mote with a halo
+            bright = int(255 * min(1.0, fade * (1.0 + 0.55 * (glow - 1.0))))
+            if rng.random() < 0.03 * glow:        # a bright mote with a halo
                 r, g, b = min(255, r + 90), min(255, g + 90), min(255, b + 90)
                 pygame.draw.circle(surface, (r // 5, g // 5, b // 5),
                                    (int(x), int(y)), 3)
@@ -204,15 +209,35 @@ def draw_ring(surface, days, needle_day):
                       CENTRE[1] + math.sin(needle) * (RING_R + 24)), 3)
 
 
-def month_rh_spread(month):
-    lo, hi = 100.0, 0.0
-    for record in month["days"]:
-        lo = min(lo, min(record["rh"]))
-        hi = max(hi, max(record["rh"]))
-    return lo, hi
+def petal_frac(month, record):
+    """How far this day's petal reaches: its own month and the whole ramp, mixed."""
+    means = [average(r["rh"]) for r in month["days"]]
+    lo, hi = min(means), max(means)
+    mean_rh = average(record["rh"])
+    rel = (mean_rh - lo) / (hi - lo) if hi > lo else 0.5
+    return 0.5 * rel + 0.5 * clamp((mean_rh - 40.0) / 60.0)
 
 
-def draw(surface, year, month_i, open_count, fonts, cache, captions=True):
+def petal_at(pos, year, month_i, open_count):
+    """Which petal is under the cursor? Fixed slots, so this is just arithmetic."""
+    month = year[month_i]
+    dx, dy = pos[0] - CENTRE[0], pos[1] - CENTRE[1]
+    dist = math.hypot(dx, dy)
+    if dist < R_IN * 0.85 or dist > R_MAX * 1.06:
+        return None
+    # 0 at the top, growing clockwise — the same order the petals are drawn in.
+    angle = (math.atan2(dy, dx) + math.pi / 2) % math.tau
+    n = len(month["days"])
+    j = int(angle / (math.tau / n)) % n
+    if j >= open_count:
+        return None
+    record = month["days"][j]
+    tip = R_IN + 40 + petal_frac(month, record) * (R_MAX - R_IN - 40)
+    return j if dist <= tip * 1.06 else None
+
+
+def draw(surface, year, month_i, open_count, fonts, cache, captions=True,
+         hover=None, glow_cache=None):
     """One frame: the year ring, the month-flower with `open_count` petals, captions."""
     surface.fill(PAPER)
     month = year[month_i]
@@ -226,19 +251,13 @@ def draw(surface, year, month_i, open_count, fonts, cache, captions=True):
             cache.pop(next(iter(cache)))
         layer = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         rng = random.Random(month_i * 101 + open_count)
-        lo, hi = month_rh_spread(month)
         mean_dp = average([average(r["dp"]) for r in month["days"]])
         n = len(month["days"])
-        all_rh = [average(r["rh"]) for r in month["days"]]
-        m_lo, m_hi = min(all_rh), max(all_rh)
         for j, record in enumerate(records):
-            # Petals rebalance as the month grows: the flower always fills
-            # the wheel, day 1 clockwise from the top.
-            angle = j / open_count * math.tau - math.pi / 2
-            mean_rh = average(record["rh"])
-            # Reach: how humid the day was, against its month and against the ramp.
-            rel = (mean_rh - m_lo) / (m_hi - m_lo) if m_hi > m_lo else 0.5
-            frac = 0.5 * rel + 0.5 * clamp((mean_rh - 40.0) / 60.0)
+            # Fixed slots: day 1 at the top, day 2 clockwise of it, and so on.
+            # A petal that has opened never moves again.
+            angle = j / n * math.tau - math.pi / 2
+            frac = petal_frac(month, record)
             swirl = clamp((average(record["dp"]) - mean_dp) / 8.0, -1.0, 1.0) * 0.45
             petal(layer, angle, record, frac, swirl, rng)
         mean_rh_month = average([average(r["rh"]) for r in month["days"]])
@@ -247,15 +266,38 @@ def draw(surface, year, month_i, open_count, fonts, cache, captions=True):
         cache[key] = layer
     surface.blit(cache[key], (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
+    # The petal under the cursor is drawn a second time, brighter.
+    if hover is not None and glow_cache is not None and hover < len(records):
+        gkey = (month_i, open_count, hover)
+        if gkey not in glow_cache:
+            if len(glow_cache) > 14:
+                glow_cache.pop(next(iter(glow_cache)))
+            layer = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            rng = random.Random(month_i * 101 + open_count)   # same dust, same places
+            record = records[hover]
+            mean_dp = average([average(r["dp"]) for r in month["days"]])
+            angle = hover / len(month["days"]) * math.tau - math.pi / 2
+            frac = petal_frac(month, record)
+            swirl = clamp((average(record["dp"]) - mean_dp) / 8.0, -1.0, 1.0) * 0.45
+            petal(layer, angle, record, frac, swirl, rng, glow=2.1)
+            glow_cache[gkey] = layer
+        surface.blit(glow_cache[gkey], (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+
     last = records[-1]
     if not captions:
         return
     date = f"2025-{month['month']:02d}-{last['day']:02d}"
     line1 = fonts[0].render(date, True, INK)
-    line2 = fonts[1].render(
-        f"{open_count} of {len(month['days'])} petals   "
-        f"humidity {average([average(r['rh']) for r in records]):.0f} %   "
-        f"← → grow (hold, click, or wheel)   ↑ ↓ month   space play", True, (140, 142, 150))
+    if hover is not None and hover < len(records):
+        record = records[hover]
+        line2_text = (f"day {record['day']:02d} under the cursor   "
+                      f"humidity {average(record['rh']):.0f} %   "
+                      f"dew point {average(record['dp']):.1f} C")
+    else:
+        line2_text = (f"{open_count} of {len(month['days'])} petals   "
+                      f"humidity {average([average(r['rh']) for r in records]):.0f} %   "
+                      f"← → grow (hold, click, or wheel)   ↑ ↓ month   space play")
+    line2 = fonts[1].render(line2_text, True, (140, 142, 150))
     surface.blit(line1, (24, 20))
     surface.blit(line2, (24, HEIGHT - 40))
 
@@ -303,6 +345,8 @@ def main():
     parser.add_argument("--month", type=int, default=0, metavar="1-12")
     parser.add_argument("--open", type=int, default=0, metavar="N",
                         help="petals open; 0 = the whole month")
+    parser.add_argument("--hover", type=int, default=0, metavar="N",
+                        help="draw petal N as if the cursor were on it")
     args = parser.parse_args()
 
     pygame.init()
@@ -318,7 +362,9 @@ def main():
     full = len(year[month_i]["days"])
     open_count = full if args.open == 0 else max(1, min(full, args.open))
     playing = args.play
+    hover = (args.hover - 1) if args.hover else None
     cache = {}
+    glow_cache = {}
 
     if args.sheet:
         pygame.image.save(render_sheet(year, fonts), args.sheet)
@@ -327,7 +373,8 @@ def main():
         return
 
     if args.save:
-        draw(surface, year, month_i, open_count, fonts, cache)
+        draw(surface, year, month_i, open_count, fonts, cache,
+             hover=hover, glow_cache=glow_cache)
         pygame.image.save(surface, args.save)
         print(f"saved {args.save} (month {month_i + 1}, {open_count} petals)")
         pygame.quit()
@@ -337,9 +384,25 @@ def main():
         """Mirror the state in the terminal, so it is visible even unfocused."""
         month = year[month_i]
         record = month["days"][open_count - 1]
+        note = f"petal {hover + 1} lit" if hover is not None else ""
         print(f"\r2025-{month['month']:02d}-{record['day']:02d}   "
               f"{open_count} of {len(month['days'])} petals   "
-              f"{'growing...' if playing else 'paused   '}", end="", flush=True)
+              f"{'growing...' if playing else 'paused   '}  {note}     ",
+              end="", flush=True)
+
+    def track(pos=None):
+        """Which petal is under the cursor right now?"""
+        nonlocal hover
+        found = petal_at(pos if pos is not None else pygame.mouse.get_pos(),
+                         year, month_i, open_count)
+        if found != hover:
+            hover = found
+            try:      # a hand over a petal; fails on some drivers, which is fine
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if found is not None
+                                        else pygame.SYSTEM_CURSOR_ARROW)
+            except pygame.error:
+                pass
+            report()
 
     def grow():
         nonlocal month_i, open_count
@@ -348,6 +411,7 @@ def main():
             month_i = (month_i + 1) % 12
             open_count = 1
         report()
+        track()
 
     def shrink():
         nonlocal month_i, open_count
@@ -356,6 +420,7 @@ def main():
             month_i = (month_i - 1) % 12
             open_count = len(year[month_i]["days"])
         report()
+        track()
 
     print("click the window, then use ← → to open and close petals")
     report()
@@ -376,10 +441,12 @@ def main():
                     month_i = (month_i + 1) % 12
                     open_count = len(year[month_i]["days"])
                     report()
+                    track()
                 elif event.key == pygame.K_DOWN:
                     month_i = (month_i - 1) % 12
                     open_count = len(year[month_i]["days"])
                     report()
+                    track()
                 elif event.key == pygame.K_SPACE:
                     playing = not playing
                     report()
@@ -389,6 +456,8 @@ def main():
                     pygame.image.save(surface, name)
                     print(f"\nsaved {name.name}")
                     report()
+            elif event.type == pygame.MOUSEMOTION:
+                track(event.pos)
             elif event.type == pygame.MOUSEWHEEL:
                 for _ in range(abs(event.y)):
                     grow() if event.y > 0 else shrink()
@@ -399,7 +468,8 @@ def main():
                     shrink()
         if playing and frame % 4 == 0:
             grow()
-        draw(surface, year, month_i, open_count, fonts, cache)
+        draw(surface, year, month_i, open_count, fonts, cache,
+             hover=hover, glow_cache=glow_cache)
         pygame.display.flip()
         clock.tick(FPS)
         frame += 1
