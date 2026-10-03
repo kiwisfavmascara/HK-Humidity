@@ -49,3 +49,16 @@ uv run plot.py
 `out/humidity-year.png` is the first attempt — one line of daily means. It is
 still here because it is the reason the grids exist: averaging the day away
 threw out the strongest pattern in the file.
+
+## The interface
+
+```bash
+uv run --with streamlit --with pandas streamlit run app.py
+```
+
+The grids show the whole year; `app.py` is the close-up. Choose a month and a
+day and the page redraws that day's 24 hours — relative humidity on the left,
+dew point on the right — with the month's average day drawn underneath, so you
+can see whether a particular day follows its month's rhythm or breaks it.
+Change the day and only the charts change; every day has exactly 24 readings,
+and February offers 28 days, not 30.
