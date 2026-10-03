@@ -10,8 +10,11 @@ A flower that grows with the year: one flower is one month, one petal is one day
 
 Keys: RIGHT opens one more petal (one more day), LEFT closes one; when a month
 is full, the next petal starts the following month. UP/DOWN jump between
-months, SPACE plays the year growing from January the 1st, the mouse wheel
-also opens and closes, S saves a frame, Q or ESC quits.
+months, SPACE plays the year growing from January the 1st, the mouse wheel and
+mouse clicks also open and close, holding an arrow key keeps growing, S saves
+a frame, Q or ESC quits. Click the window once first: key presses follow the
+focused window, and the terminal you launched it from would otherwise keep
+them.
 Headless: uv run bloom.py --save out.png [--month 6 --open 16]
           uv run bloom.py --sheet out/bloom-year.png   (all twelve months)
 
@@ -252,7 +255,7 @@ def draw(surface, year, month_i, open_count, fonts, cache, captions=True):
     line2 = fonts[1].render(
         f"{open_count} of {len(month['days'])} petals   "
         f"humidity {average([average(r['rh']) for r in records]):.0f} %   "
-        f"← → grow   ↑ ↓ month   space play", True, (140, 142, 150))
+        f"← → grow (hold, click, or wheel)   ↑ ↓ month   space play", True, (140, 142, 150))
     surface.blit(line1, (24, 20))
     surface.blit(line2, (24, HEIGHT - 40))
 
@@ -295,6 +298,8 @@ def main():
     parser.add_argument("--save", metavar="PNG")
     parser.add_argument("--sheet", metavar="PNG",
                         help="render all twelve months on one page")
+    parser.add_argument("--play", action="store_true",
+                        help="start with the year already growing")
     parser.add_argument("--month", type=int, default=0, metavar="1-12")
     parser.add_argument("--open", type=int, default=0, metavar="N",
                         help="petals open; 0 = the whole month")
@@ -304,14 +309,15 @@ def main():
     fonts = (pygame.font.SysFont("menlo,monaco,arial", 34),
              pygame.font.SysFont("menlo,monaco,arial", 17))
     surface = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Hong Kong humidity, in bloom")
+    pygame.display.set_caption("Hong Kong humidity, in bloom — click this window, then ← →")
     clock = pygame.time.Clock()
+    pygame.key.set_repeat(280, 45)      # holding an arrow key keeps growing
 
     year = load_days()
     month_i = (args.month - 1) % 12
     full = len(year[month_i]["days"])
     open_count = full if args.open == 0 else max(1, min(full, args.open))
-    playing = False
+    playing = args.play
     cache = {}
 
     if args.sheet:
@@ -327,6 +333,33 @@ def main():
         pygame.quit()
         return
 
+    def report():
+        """Mirror the state in the terminal, so it is visible even unfocused."""
+        month = year[month_i]
+        record = month["days"][open_count - 1]
+        print(f"\r2025-{month['month']:02d}-{record['day']:02d}   "
+              f"{open_count} of {len(month['days'])} petals   "
+              f"{'growing...' if playing else 'paused   '}", end="", flush=True)
+
+    def grow():
+        nonlocal month_i, open_count
+        open_count += 1
+        if open_count > len(year[month_i]["days"]):
+            month_i = (month_i + 1) % 12
+            open_count = 1
+        report()
+
+    def shrink():
+        nonlocal month_i, open_count
+        open_count -= 1
+        if open_count < 1:
+            month_i = (month_i - 1) % 12
+            open_count = len(year[month_i]["days"])
+        report()
+
+    print("click the window, then use ← → to open and close petals")
+    report()
+
     running = True
     frame = 0
     while running:
@@ -336,40 +369,41 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RIGHT:
-                    open_count += 1
-                    if open_count > len(year[month_i]["days"]):
-                        month_i = (month_i + 1) % 12
-                        open_count = 1
+                    grow()
                 elif event.key == pygame.K_LEFT:
-                    open_count -= 1
-                    if open_count < 1:
-                        month_i = (month_i - 1) % 12
-                        open_count = len(year[month_i]["days"])
+                    shrink()
                 elif event.key == pygame.K_UP:
                     month_i = (month_i + 1) % 12
                     open_count = len(year[month_i]["days"])
+                    report()
                 elif event.key == pygame.K_DOWN:
                     month_i = (month_i - 1) % 12
                     open_count = len(year[month_i]["days"])
+                    report()
                 elif event.key == pygame.K_SPACE:
                     playing = not playing
+                    report()
                 elif event.key == pygame.K_s:
                     name = HERE / "out" / f"bloom-{month_i + 1:02d}-{open_count:02d}.png"
                     (HERE / "out").mkdir(parents=True, exist_ok=True)
                     pygame.image.save(surface, name)
-                    print(f"saved {name.name}")
+                    print(f"\nsaved {name.name}")
+                    report()
             elif event.type == pygame.MOUSEWHEEL:
-                open_count = max(1, min(len(year[month_i]["days"]),
-                                        open_count + event.y))
+                for _ in range(abs(event.y)):
+                    grow() if event.y > 0 else shrink()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:            # left click opens a petal
+                    grow()
+                elif event.button == 3:          # right click closes one
+                    shrink()
         if playing and frame % 4 == 0:
-            open_count += 1
-            if open_count > len(year[month_i]["days"]):
-                month_i = (month_i + 1) % 12
-                open_count = 1
+            grow()
         draw(surface, year, month_i, open_count, fonts, cache)
         pygame.display.flip()
         clock.tick(FPS)
         frame += 1
+    print()
     pygame.quit()
 
 

@@ -82,8 +82,13 @@ winter days sitting almost straight.
 The flower starts as a single petal — July the 1st — and every ←/→ (or the
 mouse wheel) opens one more day; when the month is full, the next petal
 belongs to the next month. ↑/↓ jump between months, SPACE lets the year grow
-by itself. The faint outer ring is still the whole year at a glance: one tick
-per day, with a needle on the newest petal.
+by itself. **Click the window once before pressing keys** — keys follow the
+focused window, and the terminal you launched from would otherwise keep them.
+Holding an arrow key keeps the flower growing; a left click also opens a petal
+and a right click closes one; the window is mirrored by a line of text in the
+terminal, so you can see the state even if the window is behind something.
+The faint outer ring is still the whole year at a glance: one tick per day,
+with a needle on the newest petal.
 
 The whole year on one page:
 
