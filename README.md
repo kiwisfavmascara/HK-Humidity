@@ -62,3 +62,30 @@ dew point on the right — with the month's average day drawn underneath, so you
 can see whether a particular day follows its month's rhythm or breaks it.
 Change the day and only the charts change; every day has exactly 24 readings,
 and February offers 28 days, not 30.
+
+## The bloom
+
+```bash
+uv run --with pygame-ce bloom.py
+```
+
+The grids and the flower are the same 8,760 numbers — the grid bent into a
+wheel. One flower is one month; one petal is one day, and the radius of a
+petal is the hour: the heart of the flower is 00:00, the petal tips are
+24:00. The stripes that ran **down** the humidity grid now run outward
+through every petal, and you can read the daily swing straight off a petal:
+it swells and warms where its hours were humid, cools to blue where they
+were dry. The curl of each petal is that day's mean dew point — the
+"stripes run across" grid drawn as a gesture, summer days coiling and
+winter days sitting almost straight.
+
+The flower starts as a single petal — July the 1st — and every ←/→ (or the
+mouse wheel) opens one more day; when the month is full, the next petal
+belongs to the next month. ↑/↓ jump between months, SPACE lets the year grow
+by itself. The faint outer ring is still the whole year at a glance: one tick
+per day, with a needle on the newest petal.
+
+`bloom_day.py` is the previous version, kept on purpose: there one flower was
+one day (24 petals, one per hour) and the arrow keys scrubbed the year. It is
+the same data read at the other end of the zoom — the day as a specimen, the
+month as a habit.

@@ -37,3 +37,20 @@ testing that February offers 28 days before trusting the selector. Running
 the app changed how I read my own picture: the grids say the daily rhythm
 repeats 365 times, but picking a wet Saturday and watching it hug the
 month's average line is what made the claim feel true.
+
+**The bloom.** The grids answer "what does a year of humidity look like", but
+I kept wondering whether the same numbers could be *grown* instead of plotted.
+The AI helped me write two pygame sketches. In `bloom_day.py` one flower is
+one day — 24 petals, one per hour, scrubbed with the arrow keys. It was pretty
+but I could not shake the feeling that a flower that lasts one keystroke is
+not a flower you watch live. The second version, `bloom.py`, is the one I
+kept: one flower is one month, one petal is one day, and the petal's radius
+is the hour — 00:00 at the heart, 24:00 at the tip. That last mapping is the
+whole point: it is the humidity grid bent into a wheel, the stripes that ran
+down the panel now running outward through every petal, and the dew-point
+panel reduced to a gesture (each petal curls by that day's mean dew point).
+Pressing → opens one more day, so the flower assembles the way a month does.
+The decisions were mine: keeping the old version in the repo instead of
+deleting it, keeping the 365-tick year ring so growth always has a context,
+and accepting that a month-flower takes a minute to open — the slowness is
+the data.
