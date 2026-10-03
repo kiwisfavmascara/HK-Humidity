@@ -103,7 +103,10 @@ uv run --with pygame-ce bloom.py --sheet out/bloom-year.png
 
 On a machine with no screen — a server, or a marker over ssh — plain
 `uv run bloom.py` needs no special handling: with no window available it writes
-`out/bloom-year.png` instead and says so.
+`out/bloom-year.png` instead and says so. That includes the invisible `dummy`
+and `offscreen` drivers some CI setups use; nothing ever sits waiting for a
+keypress that cannot arrive. Every PNG it writes is plain RGB, the same file
+whether or not a window was there.
 
 ![twelve flowers, one per month: small blue-teal blooms in winter, fully open magenta ones in summer](out/bloom-year.png)
 

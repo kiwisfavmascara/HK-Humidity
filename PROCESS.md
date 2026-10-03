@@ -95,3 +95,18 @@ and writes `out/bloom-year.png` instead, saying so in one line. The lesson is
 the week-2 one again, arriving from a new direction — a program that only
 works on the machine where it was written is not finished, and the argument
 about my own data is worth nothing if the marker cannot run it.
+
+**Two more bugs came out of testing that same fix.** The fallback worked, but
+it was hiding a worse one underneath: pointed at SDL's invisible `dummy`
+driver the program happily opened a window that nobody could see or click and
+then sat in it forever. A hang is harder to diagnose than the crash it
+replaced, so a dummy or offscreen driver now counts as no screen at all. The
+second bug was in the picture itself. The AI helped me compare the render made
+without a screen against the one already in the repo, and while the colours
+matched pixel for pixel, the file was not the same: a plain `pygame.Surface`
+inherits the display's 32-bit format, and that alpha channel was being written
+into the PNG uninitialised, leaving thousands of bright pixels fully
+transparent. On the white page where this README shows the image they would
+simply have disappeared. Frames are now composited onto a plain 24-bit surface
+before saving, and the two renders — window and no window — are byte for byte
+the same file, which is the check I should have run the first time.

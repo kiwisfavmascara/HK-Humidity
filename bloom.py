@@ -316,13 +316,24 @@ def draw(surface, year, month_i, open_count, fonts, cache, captions=True,
     surface.blit(line2, (24, HEIGHT - 40))
 
 
+def save_png(surface, path):
+    """Save a plain RGB PNG. A bare pygame.Surface inherits the display's
+    32-bit alpha format, and that alpha channel comes out uninitialised — a
+    picture with holes in it on any viewer that honours transparency. Adding
+    the pixels onto black keeps the colour and throws the alpha away."""
+    flat = pygame.Surface(surface.get_size(), 0, 24)
+    flat.fill((0, 0, 0))
+    flat.blit(surface, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+    pygame.image.save(flat, path)
+
+
 def render_sheet(days, fonts, scale=0.52):
     """The whole year on one page: twelve months, each a flower fully open."""
     cell_w, cell_h = int(WIDTH * scale), int(HEIGHT * scale)
     cols, rows = 4, 3
     pad = 18
     sheet = pygame.Surface((cols * cell_w + (cols + 1) * pad,
-                            rows * cell_h + (rows + 1) * pad + 44))
+                            rows * cell_h + (rows + 1) * pad + 44), 0, 24)
     sheet.fill((10, 11, 15))
     title_font = pygame.font.SysFont("menlo,monaco,arial", 24)
     label_font = pygame.font.SysFont("menlo,monaco,arial", 18)
@@ -332,7 +343,7 @@ def render_sheet(days, fonts, scale=0.52):
         "Hong Kong 2025, in bloom — one flower per month, one petal per day, "
         "the radius is the hour", True, (226, 224, 218))
     sheet.blit(title, (pad + 6, 12))
-    frame = pygame.Surface((WIDTH, HEIGHT))
+    frame = pygame.Surface((WIDTH, HEIGHT), 0, 24)
     for month_i in range(12):
         count = len(days[month_i]["days"])
         draw(frame, days, month_i, count, fonts, {}, captions=False)
@@ -379,6 +390,11 @@ def main():
         pygame.display.init()
         surface = pygame.display.set_mode((WIDTH, HEIGHT))
         window = False
+    # "dummy" and "offscreen" are screens only in name: a window that nobody
+    # can see or click would leave the loop spinning forever, so treat those
+    # as no screen at all.
+    if window and pygame.display.get_driver() in ("dummy", "offscreen"):
+        window = False
     clock = pygame.time.Clock()
     pygame.key.set_repeat(280, 45)      # holding an arrow key keeps growing
 
@@ -394,7 +410,7 @@ def main():
     if args.sheet or (not window and not args.save):
         target = args.sheet or str(HERE / "out" / "bloom-year.png")
         (HERE / "out").mkdir(parents=True, exist_ok=True)
-        pygame.image.save(render_sheet(year, fonts), target)
+        save_png(render_sheet(year, fonts), target)
         if not window and not args.sheet:
             print("no display available — wrote out/bloom-year.png instead of a window")
         else:
@@ -405,7 +421,7 @@ def main():
     if args.save:
         draw(surface, year, month_i, open_count, fonts, cache,
              hover=hover, glow_cache=glow_cache)
-        pygame.image.save(surface, args.save)
+        save_png(surface, args.save)
         print(f"saved {args.save} (month {month_i + 1}, {open_count} petals)")
         pygame.quit()
         return
@@ -483,7 +499,7 @@ def main():
                 elif event.key == pygame.K_s:
                     name = HERE / "out" / f"bloom-{month_i + 1:02d}-{open_count:02d}.png"
                     (HERE / "out").mkdir(parents=True, exist_ok=True)
-                    pygame.image.save(surface, name)
+                    save_png(surface, name)
                     print(f"\nsaved {name.name}")
                     report()
             elif event.type == pygame.MOUSEMOTION:
