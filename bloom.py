@@ -94,6 +94,16 @@ def clamp(x, low=0.0, high=1.0):
     return max(low, min(high, x))
 
 
+# How a day's humidity becomes a petal's reach.
+#   REL_WEIGHT   how much of the reach is "wetter than the rest of this month"
+#                (the rest is the absolute, year-wide reading)
+#   REACH_POWER  a gentle compression, so a two-point gap is not a chasm
+#   REACH_FLOOR  no petal disappears: the driest day is a short petal, not a gap
+REL_WEIGHT = 0.35
+REACH_POWER = 0.85
+REACH_FLOOR = 0.12
+
+
 def _ramp(stops, value, low, high):
     t = clamp((value - low) / (high - low))
     pos = t * (len(stops) - 1)
@@ -210,12 +220,15 @@ def draw_ring(surface, days, needle_day):
 
 
 def petal_frac(month, record):
-    """How far this day's petal reaches: its own month and the whole ramp, mixed."""
+    """How far this day's petal reaches: its own month and the whole ramp, mixed,
+    then compressed so the flower stays readable, with a floor so no day vanishes."""
     means = [average(r["rh"]) for r in month["days"]]
     lo, hi = min(means), max(means)
     mean_rh = average(record["rh"])
     rel = (mean_rh - lo) / (hi - lo) if hi > lo else 0.5
-    return 0.5 * rel + 0.5 * clamp((mean_rh - 40.0) / 60.0)
+    abso = clamp((mean_rh - 40.0) / 60.0)
+    mixed = REL_WEIGHT * rel + (1.0 - REL_WEIGHT) * abso
+    return max(REACH_FLOOR, mixed ** REACH_POWER)
 
 
 def petal_at(pos, year, month_i, open_count):

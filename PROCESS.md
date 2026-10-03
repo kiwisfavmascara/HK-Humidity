@@ -68,3 +68,20 @@ humidity and dew point — appear at the foot of the window. That turned the
 flower from a picture you look at into one you can interrogate, and it uses
 the same hit-test arithmetic as the drawing, so the lit petal and the label
 can never disagree.
+
+**Calibrating the reach.** The first petal-length formula mixed two readings
+half and half — how humid the day was against its own month, and against the
+40–100 % ramp — and the mix shouted. In July, where daily means only wander
+between 79 and 94 %, that 15-point spread was stretched into a threefold
+difference in petal length; in January the driest days (33 %) collapsed to
+zero and simply vanished, which read as missing data, not as dryness. The AI
+helped me rewrite the mapping as three named constants at the top of the
+file, and the values are a claim about the data, so they belong in writing:
+`REL_WEIGHT = 0.35` (how much of the reach is "wet for this month", the rest
+is the absolute reading), `REACH_POWER = 0.85` (a gentle compression so a
+two-point gap is not a chasm) and `REACH_FLOOR = 0.12` (no petal disappears;
+the driest day is a short petal, not a hole). With these, July's
+loudest-to-quietest ratio falls from about 3× to 2×, and January's dry spell
+survives as stubs you can still hover and read. Nothing else moved: the
+colour, the swell and the curl still use the raw humidity and dew point, so
+the length is the only place this calibration lives.

@@ -105,15 +105,18 @@ uv run --with pygame-ce bloom.py --sheet out/bloom-year.png
 
 **Why the winter flowers look ragged.** The petals are evenly spaced — day j
 always sits at j/360 of the turn — but they are not evenly *sized*, and the
-unevenness is the data. Petal reach is the day's mean humidity, and the
-months differ wildly in how much that varies: a January swings from 33 %
-(dry continental wind, the 12th) to 84 % (a humid spell, the 25th), a
-51-point spread, so its flower is a mix of long plumes and stubs that lean
-in opposite directions (the lean is dew point, and January had real cold
-spells and a warm humid one). A July only spreads 15 points, 79 to 94 %, so
-its flower is a regular, fully-open rosette. The tidy summer and the ragged
-winter are the same design reading the same number — winter is simply a
-more argumentative month.
+unevenness is the data. Petal reach blends two readings: 35 % of it is how
+humid the day was against the rest of its month, 65 % is its place on the
+absolute 40–100 % ramp, the mix is gently compressed, and a floor keeps the
+driest day as a short petal rather than a hole. The months still differ
+wildly, because the data does: a January swings from 33 % (dry continental
+wind, the 12th) to 84 % (a humid spell, the 25th) — a 51-point spread — so
+its flower is a mix of long plumes and stubs that lean in opposite directions
+(the lean is dew point, and January had real cold spells and a warm humid
+one). A July only spreads 15 points, 79 to 94 %, so its flower is close to a
+regular, fully-open rosette. The tidy summer and the ragged winter are the
+same design reading the same number — winter is simply a more argumentative
+month.
 
 `bloom_day.py` is the previous version, kept on purpose: there one flower was
 one day (24 petals, one per hour) and the arrow keys scrubbed the year. It is
