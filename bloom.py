@@ -13,6 +13,7 @@ is full, the next petal starts the following month. UP/DOWN jump between
 months, SPACE plays the year growing from January the 1st, the mouse wheel
 also opens and closes, S saves a frame, Q or ESC quits.
 Headless: uv run bloom.py --save out.png [--month 6 --open 16]
+          uv run bloom.py --sheet out/bloom-year.png   (all twelve months)
 
 The promise: the two grids (out/humidity-grids.png) show 365 days x 24 hours;
 this flower is the same numbers with the grid bent into a wheel. One petal is
@@ -208,7 +209,7 @@ def month_rh_spread(month):
     return lo, hi
 
 
-def draw(surface, year, month_i, open_count, fonts, cache):
+def draw(surface, year, month_i, open_count, fonts, cache, captions=True):
     """One frame: the year ring, the month-flower with `open_count` petals, captions."""
     surface.fill(PAPER)
     month = year[month_i]
@@ -244,6 +245,8 @@ def draw(surface, year, month_i, open_count, fonts, cache):
     surface.blit(cache[key], (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
     last = records[-1]
+    if not captions:
+        return
     date = f"2025-{month['month']:02d}-{last['day']:02d}"
     line1 = fonts[0].render(date, True, INK)
     line2 = fonts[1].render(
@@ -254,9 +257,44 @@ def draw(surface, year, month_i, open_count, fonts, cache):
     surface.blit(line2, (24, HEIGHT - 40))
 
 
+def render_sheet(days, fonts, scale=0.52):
+    """The whole year on one page: twelve months, each a flower fully open."""
+    cell_w, cell_h = int(WIDTH * scale), int(HEIGHT * scale)
+    cols, rows = 4, 3
+    pad = 18
+    sheet = pygame.Surface((cols * cell_w + (cols + 1) * pad,
+                            rows * cell_h + (rows + 1) * pad + 44))
+    sheet.fill((10, 11, 15))
+    title_font = pygame.font.SysFont("menlo,monaco,arial", 24)
+    label_font = pygame.font.SysFont("menlo,monaco,arial", 18)
+    names = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+             "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+    title = title_font.render(
+        "Hong Kong 2025, in bloom — one flower per month, one petal per day, "
+        "the radius is the hour", True, (226, 224, 218))
+    sheet.blit(title, (pad + 6, 12))
+    frame = pygame.Surface((WIDTH, HEIGHT))
+    for month_i in range(12):
+        count = len(days[month_i]["days"])
+        draw(frame, days, month_i, count, fonts, {}, captions=False)
+        small = pygame.transform.smoothscale(frame, (cell_w, cell_h))
+        col, row = month_i % cols, month_i // cols
+        x = pad + col * (cell_w + pad)
+        y = 44 + pad + row * (cell_h + pad)
+        sheet.blit(small, (x, y))
+        mean = average([average(r["rh"]) for r in days[month_i]["days"]])
+        label = label_font.render(
+            f"{names[month_i]}  ·  {count} days  ·  mean {mean:.0f} %",
+            True, (200, 202, 210))
+        sheet.blit(label, (x + 10, y + 8))
+    return sheet
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--save", metavar="PNG")
+    parser.add_argument("--sheet", metavar="PNG",
+                        help="render all twelve months on one page")
     parser.add_argument("--month", type=int, default=0, metavar="1-12")
     parser.add_argument("--open", type=int, default=0, metavar="N",
                         help="petals open; 0 = the whole month")
@@ -275,6 +313,12 @@ def main():
     open_count = full if args.open == 0 else max(1, min(full, args.open))
     playing = False
     cache = {}
+
+    if args.sheet:
+        pygame.image.save(render_sheet(year, fonts), args.sheet)
+        print(f"saved {args.sheet} (twelve months)")
+        pygame.quit()
+        return
 
     if args.save:
         draw(surface, year, month_i, open_count, fonts, cache)
