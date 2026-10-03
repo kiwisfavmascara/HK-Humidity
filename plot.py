@@ -144,7 +144,7 @@ def main():
          "dew point — the stripes run across", f"dew point ({units['dewpoint_2m']})",
          0, 28, month_starts, month_middles)
 
-    OUT.mkdir(exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     target = OUT / "humidity-grids.png"
     figure.tight_layout()
     figure.savefig(target, dpi=150, facecolor=PAPER)

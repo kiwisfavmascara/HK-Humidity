@@ -85,3 +85,13 @@ loudest-to-quietest ratio falls from about 3× to 2×, and January's dry spell
 survives as stubs you can still hover and read. Nothing else moved: the
 colour, the swell and the curl still use the raw humidity and dew point, so
 the length is the only place this calibration lives.
+
+**A correction the marker would have found first.** The brief asks that the
+code run with `uv run` and no arguments, and when I finally tested the flower
+that way on a machine with no screen it died — `pygame.display.set_mode`
+raises, and with it goes the whole program. The AI helped me add the fallback:
+if no window can be opened, the script switches SDL to its offscreen driver
+and writes `out/bloom-year.png` instead, saying so in one line. The lesson is
+the week-2 one again, arriving from a new direction — a program that only
+works on the machine where it was written is not finished, and the argument
+about my own data is worth nothing if the marker cannot run it.

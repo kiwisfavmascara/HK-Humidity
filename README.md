@@ -101,6 +101,10 @@ The whole year on one page:
 uv run --with pygame-ce bloom.py --sheet out/bloom-year.png
 ```
 
+On a machine with no screen — a server, or a marker over ssh — plain
+`uv run bloom.py` needs no special handling: with no window available it writes
+`out/bloom-year.png` instead and says so.
+
 ![twelve flowers, one per month: small blue-teal blooms in winter, fully open magenta ones in summer](out/bloom-year.png)
 
 **Why the winter flowers look ragged.** The petals are evenly spaced — day j

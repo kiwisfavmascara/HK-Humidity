@@ -40,6 +40,7 @@ Every number comes from data/*.json — nothing here is decorative.
 import argparse
 import json
 import math
+import os
 import random
 from pathlib import Path
 
@@ -365,8 +366,19 @@ def main():
     pygame.init()
     fonts = (pygame.font.SysFont("menlo,monaco,arial", 34),
              pygame.font.SysFont("menlo,monaco,arial", 17))
-    surface = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Hong Kong humidity, in bloom — click this window, then ← →")
+    try:
+        surface = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("Hong Kong humidity, in bloom — click this window, then ← →")
+        window = True
+    except pygame.error:
+        # No screen here (a server, a marker's machine over ssh): fall back to
+        # SDL's offscreen driver and write a picture instead of failing to open
+        # a window. `uv run bloom.py` with no arguments has to work anywhere.
+        os.environ["SDL_VIDEODRIVER"] = "dummy"
+        pygame.display.quit()
+        pygame.display.init()
+        surface = pygame.display.set_mode((WIDTH, HEIGHT))
+        window = False
     clock = pygame.time.Clock()
     pygame.key.set_repeat(280, 45)      # holding an arrow key keeps growing
 
@@ -379,9 +391,14 @@ def main():
     cache = {}
     glow_cache = {}
 
-    if args.sheet:
-        pygame.image.save(render_sheet(year, fonts), args.sheet)
-        print(f"saved {args.sheet} (twelve months)")
+    if args.sheet or (not window and not args.save):
+        target = args.sheet or str(HERE / "out" / "bloom-year.png")
+        (HERE / "out").mkdir(parents=True, exist_ok=True)
+        pygame.image.save(render_sheet(year, fonts), target)
+        if not window and not args.sheet:
+            print("no display available — wrote out/bloom-year.png instead of a window")
+        else:
+            print(f"saved {target} (twelve months)")
         pygame.quit()
         return
 

@@ -40,7 +40,7 @@ def fetch(url, path):
         print(f"data/{path.name} is already here ({path.stat().st_size // 1024} KB). "
               "Delete it to fetch again.")
         return path
-    DATA.mkdir(exist_ok=True)
+    DATA.mkdir(parents=True, exist_ok=True)
     print(f"asking {url}")
     reply = requests.get(url, timeout=60, headers={"User-Agent": "SD5913 PolyU student"})
     reply.raise_for_status()
