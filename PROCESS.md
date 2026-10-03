@@ -25,3 +25,15 @@ tick landed at 4,546 on a 365-row axis, the year stretched twelvefold, and the
 whole picture collapsed into a single stripe at the top of the panel. The fix
 was one line — hours to days, `i // 24` — but the lesson is the one week 2
 kept making: the picture breaking loudly was the only reason we looked.
+
+**The interface.** Week 4's exercise was to adapt one interaction idea from
+the tide examples. I chose the most direct one — the tide app's promise
+"when I choose a day, the chart shows that day's 24 hourly heights" — and
+applied it to my own numbers. The AI helped me write `app.py` in one pass; my
+contribution was the scoping: a 2D line chart, not anything
+three-dimensional; the month's average day drawn underneath the chosen day,
+because that comparison is the one thing the static grids cannot give; and
+testing that February offers 28 days before trusting the selector. Running
+the app changed how I read my own picture: the grids say the daily rhythm
+repeats 365 times, but picking a wet Saturday and watching it hug the
+month's average line is what made the claim feel true.
