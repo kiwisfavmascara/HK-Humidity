@@ -1,5 +1,11 @@
 # PROCESS.md
 
+I made this in two sittings, and keeping them apart is the honest way to
+describe it: the data and the two grids came first, on 17 September 2026;
+everything interactive — the week-4 app, both flowers, and the bugs they
+exposed — came later, on 3 October 2026. The dates below are the days each
+decision was actually made.
+
 **Tools.** I worked with an AI assistant (Claude, in WorkBuddy) for most of the
 making: it tested five candidate data sources against the "no key, one file"
 rule before I chose, wrote `fetch.py`, `print_humidity.py` and `plot.py`, and
@@ -7,6 +13,12 @@ rendered both pictures. The decisions were mine: the phenomenon (humidity,
 over the wind, rain, daylight and solar-radiation options it offered), the
 informative path over the artistic one, and whether each picture actually says
 something.
+
+## 17 September 2026 — the phenomenon, the data, the first pictures
+
+One afternoon, in this order: choose the phenomenon, fetch the year and keep
+the raw reply, print the first hours before drawing anything, draw the wrong
+picture, redraw it as the two grids, then write it up.
 
 **What I kept.** The two-panel layout — relative humidity and dew point on the
 same 365 × 24 grid. It was proposed after the numbers showed that 894 hours
@@ -25,6 +37,12 @@ tick landed at 4,546 on a 365-row axis, the year stretched twelvefold, and the
 whole picture collapsed into a single stripe at the top of the panel. The fix
 was one line — hours to days, `i // 24` — but the lesson is the one week 2
 kept making: the picture breaking loudly was the only reason we looked.
+
+## 3 October 2026 — the interaction, the flower, and what both broke
+
+Everything below happened in one evening, in this order: the week-4 app
+first because it was the exercise, then the flower because I wanted to see
+the same numbers grow, then the corrections each one forced.
 
 **The interface.** Week 4's exercise was to adapt one interaction idea from
 the tide examples. I chose the most direct one — the tide app's promise
